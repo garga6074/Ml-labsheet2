@@ -1,0 +1,328 @@
+import pandas as pd
+import numpy as np
+
+# Create a sample dataset containing missing values for demonstration
+data = {
+    'Age': [25, np.nan, 30, 35, np.nan, 40],
+    'Salary': [50000, 60000, np.nan, 80000, 55000, np.nan],
+    'City': ['New York', 'Paris', np.nan, 'London', 'Paris', 'New York'],
+    'Bad_Column': [np.nan, 2, np.nan, np.nan, 5, np.nan] # More than 50% missing
+}
+
+df_original = pd.DataFrame(data)
+print("--- Original Dataset ---")
+print(df_original)
+
+# -------------------------------------------------------------------------
+# 1. Load a dataset and identify missing values in each column.
+# -------------------------------------------------------------------------
+print("\n=== 1. Missing Values Count ===")
+missing_count = df_original.isnull().sum()
+print(missing_count)
+
+# -------------------------------------------------------------------------
+# 2. Display the percentage of missing values in every feature.
+# -------------------------------------------------------------------------
+print("\n=== 2. Percentage of Missing Values ===")
+missing_percentage = (df_original.isnull().sum() / len(df_original)) * 100
+print(missing_percentage)
+
+# -------------------------------------------------------------------------
+# 3. Remove rows containing missing values from the dataset.
+# -------------------------------------------------------------------------
+print("\n=== 3. Dataset after removing rows with any missing values ===")
+df_dropped_rows = df_original.dropna()
+print(df_dropped_rows)
+
+# -------------------------------------------------------------------------
+# 4. Remove columns having more than 50% missing values.
+# -------------------------------------------------------------------------
+print("\n=== 4. Dataset after removing columns with > 50% missing values ===")
+# Threshold specifies the minimum number of NON-NA values required to keep the column
+thresh_limit = len(df_original) * 0.5 
+df_dropped_cols = df_original.dropna(thresh=thresh_limit, axis=1)
+print(df_dropped_cols)
+
+# -------------------------------------------------------------------------
+# 5. Replace missing numerical values using the mean.
+# -------------------------------------------------------------------------
+print("\n=== 5. Imputing numerical missing values with Mean ===")
+df_mean = df_original.copy()
+df_mean['Age'] = df_mean['Age'].fillna(df_mean['Age'].mean())
+df_mean['Salary'] = df_mean['Salary'].fillna(df_mean['Salary'].mean())
+print(df_mean[['Age', 'Salary']])
+
+# -------------------------------------------------------------------------
+# 6. Replace missing numerical values using the median.
+# -------------------------------------------------------------------------
+print("\n=== 6. Imputing numerical missing values with Median ===")
+df_median = df_original.copy()
+df_median['Age'] = df_median['Age'].fillna(df_median['Age'].median())
+df_median['Salary'] = df_median['Salary'].fillna(df_median['Salary'].median())
+print(df_median[['Age', 'Salary']])
+
+# -------------------------------------------------------------------------
+# 7. Replace missing categorical values using the mode.
+# -------------------------------------------------------------------------
+print("\n=== 7. Imputing categorical missing values with Mode ===")
+df_mode = df_original.copy()
+# mode() returns a Series, so we extract the first element index [0]
+mode_city = df_mode['City'].mode()[0] 
+df_mode['City'] = df_mode['City'].fillna(mode_city)
+print(df_mode[['City']])
+
+# -------------------------------------------------------------------------
+# 8. Fill missing values using forward fill (Forward Propagation).
+# -------------------------------------------------------------------------
+print("\n=== 8. Forward Fill (ffill) ===")
+df_ffill = df_original.ffill()
+print(df_ffill)
+
+# -------------------------------------------------------------------------
+# 9. Fill missing values using backward fill (Backward Propagation).
+# -------------------------------------------------------------------------
+print("\n=== 9. Backward Fill (bfill) ===")
+df_bfill = df_original.bfill()
+print(df_bfill)
+
+# -------------------------------------------------------------------------
+# 10. Compare the dataset before and after handling missing values.
+# -------------------------------------------------------------------------
+print("\n=== 10. Comparison: Before vs After (Example with Mean Imputation) ===")
+print("\n[BEFORE HANDLING]")
+print(df_original.info())
+
+# Complete imputation setup for comparison
+df_final = df_original.copy()
+df_final = df_final.dropna(thresh=thresh_limit, axis=1) # Drop bad columns (>50% missing)
+df_final['Age'] = df_final['Age'].fillna(df_final['Age'].mean())
+df_final['Salary'] = df_final['Salary'].fillna(df_final['Salary'].mean())
+df_final['City'] = df_final['City'].fillna(df_final['City'].mode()[0])
+
+print("\n[AFTER HANDLING]")
+print(df_final.info())
+print("\nProcessed Cleaned DataFrame:")
+print(df_final)
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, RobustScaler, MaxAbsScaler, LabelEncoder, OneHotEncoder
+
+# Ensure visual outputs are displayed nicely
+sns.set_theme(style="whitegrid")
+
+# Create a sample synthetic dataset representing the required features
+np.random.seed(42)
+data = {
+    'Age': np.random.randint(18, 70, size=100).astype(float),
+    'Salary': np.random.normal(50000, 15000, 100),
+    'Experience': np.random.exponential(scale=5, size=100),
+    'Education': np.random.choice(['High School', 'Bachelor', 'Master', 'PhD'], size=100),
+    'City': np.random.choice(['New York', 'Paris', 'Tokyo', 'London'], size=100),
+    'Join_Date': pd.date_range(start='2020-01-01', periods=100, freq='W')
+}
+
+# Inject specific outliers into the 'Salary' and 'Age' columns for demonstration
+df_original = pd.DataFrame(data)
+df_original.loc[10, 'Salary'] = 250000  # High outlier
+df_original.loc[20, 'Salary'] = -5000   # Low outlier
+df_original.loc[30, 'Age'] = 150        # High outlier
+
+print("--- Original Dataset Preview ---")
+print(df_original.head(), "\n")
+
+
+# ==========================================
+# PART 1: OUTLIER DETECTION & TREATMENT (11 - 18)
+# ==========================================
+df_outliers = df_original.copy()
+
+# 11. Detect outliers using the Interquartile Range (IQR) method
+Q1 = df_outliers['Salary'].quantile(0.25)
+Q3 = df_outliers['Salary'].quantile(0.75)
+IQR = Q3 - Q1
+lower_bound_iqr = Q1 - 1.5 * IQR
+upper_bound_iqr = Q3 + 1.5 * IQR
+iqr_outliers = df_outliers[(df_outliers['Salary'] < lower_bound_iqr) | (df_outliers['Salary'] > upper_bound_iqr)]
+print(f"11. IQR Method: Detected {len(iqr_outliers)} outliers in 'Salary'.")
+
+# 12. Detect outliers using the Z-score method
+salary_mean = df_outliers['Salary'].mean()
+salary_std = df_outliers['Salary'].std()
+df_outliers['Salary_Zscore'] = (df_outliers['Salary'] - salary_mean) / salary_std
+z_outliers = df_outliers[df_outliers['Salary_Zscore'].abs() > 3]
+print(f"12. Z-score Method: Detected {len(z_outliers)} outliers in 'Salary'.\n")
+df_outliers.drop(columns=['Salary_Zscore'], inplace=True)
+
+# 13. Visualize outliers using a Box Plot
+plt.figure(figsize=(6, 4))
+sns.boxplot(x=df_original['Salary'])
+plt.title("13. Box Plot of Salary (Showing Outliers)")
+plt.show()
+
+# 14. Visualize outliers using a Scatter Plot
+plt.figure(figsize=(6, 4))
+sns.scatterplot(x=df_original['Age'], y=df_original['Salary'])
+plt.title("14. Scatter Plot of Age vs Salary")
+plt.show()
+
+# 15. Remove outliers using the IQR method
+df_iqr_removed = df_original[(df_original['Salary'] >= lower_bound_iqr) & (df_original['Salary'] <= upper_bound_iqr)].copy()
+
+# 16. Replace outliers with the median value
+salary_median = df_original['Salary'].median()
+df_median_replaced = df_original.copy()
+df_median_replaced.loc[(df_median_replaced['Salary'] < lower_bound_iqr) | (df_median_replaced['Salary'] > upper_bound_iqr), 'Salary'] = salary_median
+
+# 17. Cap outliers using percentile-based capping (Winsorization)
+lower_capped = df_original['Salary'].quantile(0.05)
+upper_capped = df_original['Salary'].quantile(0.95)
+df_capped = df_original.copy()
+df_capped['Salary'] = df_capped['Salary'].clip(lower_capped, upper_capped)
+
+# 18. Compare the dataset before and after outlier treatment
+print("18. Comparison of Salary Summary Statistics:")
+comparison_df = pd.DataFrame({
+    'Original': df_original['Salary'].describe(),
+    'IQR Removed': df_iqr_removed['Salary'].describe(),
+    'Median Replaced': df_median_replaced['Salary'].describe(),
+    'Percentile Capped': df_capped['Salary'].describe()
+})
+print(comparison_df, "\n")
+
+
+# ==========================================
+# PART 2: FEATURE SCALING & NORMALIZATION (19 - 26)
+# ==========================================
+# We use the clean 'df_capped' dataset forward to prevent outlier skew in basic scaling
+df_scaling = df_capped.copy()
+numerical_cols = ['Age', 'Salary', 'Experience']
+
+# 19. Apply Min-Max Normalization to numerical features (Scales to 0-1)
+scaler_minmax = MinMaxScaler()
+df_minmax = df_scaling.copy()
+df_minmax[numerical_cols] = scaler_minmax.fit_transform(df_scaling[numerical_cols])
+
+# 20. Apply Standardization (Z-score Scaling) (Mean = 0, Std = 1)
+scaler_std = StandardScaler()
+df_std = df_scaling.copy()
+df_std[numerical_cols] = scaler_std.fit_transform(df_scaling[numerical_cols])
+
+# 21. Apply Robust Scaling to handle outliers (Uses Median and IQR)
+scaler_robust = RobustScaler()
+df_robust = df_scaling.copy()
+df_robust[numerical_cols] = scaler_robust.fit_transform(df_scaling[numerical_cols])
+
+# 22. Apply Max Absolute Scaling (Scales to -1 to 1 based on absolute max value)
+scaler_maxabs = MaxAbsScaler()
+df_maxabs = df_scaling.copy()
+df_maxabs[numerical_cols] = scaler_maxabs.fit_transform(df_scaling[numerical_cols])
+
+# 23. Compare original and normalized datasets
+print("23. Summary of original 'Salary' vs Min-Max Normalized 'Salary':")
+print(f"Original Min: {df_scaling['Salary'].min():.2f}, Max: {df_scaling['Salary'].max():.2f}")
+print(f"Normalized Min: {df_minmax['Salary'].min():.2f}, Max: {df_minmax['Salary'].max():.2f}\n")
+
+# 24. Visualize the effect of normalization using histograms
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+sns.histplot(df_scaling['Salary'], ax=axes[0], kde=True, color='blue').set(title='Original Salary')
+sns.histplot(df_minmax['Salary'], ax=axes[1], kde=True, color='green').set(title='Min-Max Normalized Salary')
+plt.suptitle("24. Effect of Normalization Using Histograms")
+plt.show()
+
+# 25. Visualize the effect of scaling using box plots
+scaling_comparison = pd.DataFrame({
+    'Standardized': df_std['Salary'],
+    'Robust Scaled': df_robust['Salary'],
+    'Max Abs Scaled': df_maxabs['Salary']
+})
+plt.figure(figsize=(8, 4))
+sns.boxplot(data=scaling_comparison)
+plt.title("25. Effect of Scaling Techniques Using Box Plots")
+plt.show()
+
+# 26. Compare different scaling techniques on the same dataset
+print("26. Statistical Mean and Std across Scaling Techniques:")
+print(scaling_comparison.agg(['mean', 'std']), "\n")
+
+
+# ==========================================
+# PART 3: CATEGORICAL ENCODING (27 - 29)
+# ==========================================
+df_encoding = df_scaling.copy()
+
+# 27. Encode categorical variables using Label Encoding (Ordinal encoding)
+label_enc = LabelEncoder()
+df_encoding['Education_LabelEncoded'] = label_enc.fit_transform(df_encoding['Education'])
+
+# 28. Encode categorical variables using One-Hot Encoding (Nominal columns)
+one_hot_enc = OneHotEncoder(sparse_output=False, drop='first')
+encoded_cities = one_hot_enc.fit_transform(df_encoding[['City']])
+encoded_city_df = pd.DataFrame(encoded_cities, columns=one_hot_enc.get_feature_names_out(['City']))
+df_encoding = pd.concat([df_encoding, encoded_city_df], axis=1)
+
+# 29. Perform Binary Encoding on categorical data
+# Manual alternative tool strategy since built-in category_encoders may not always be pre-installed
+# We convert the label-encoded column to its binary string format representation
+max_label = df_encoding['Education_LabelEncoded'].max()
+binary_width = len(bin(max_label)[2:])
+binary_representation = df_encoding['Education_LabelEncoded'].apply(lambda x: format(x, f'0{binary_width}b'))
+for i in range(binary_width):
+    df_encoding[f'Education_Bin_{i}'] = binary_representation.str[i].astype(int)
+
+print("27-29. Categorical Columns Encoded successfully. Columns present:")
+print([col for col in df_encoding.columns if 'City_' in col or 'Education_' in col], "\n")
+
+
+# ==========================================
+# PART 4: FEATURE ENGINEERING & TRANSFORMATION (30 - 33)
+# ==========================================
+df_engineering = df_encoding.copy()
+
+# 30. Create a new feature by combining two existing columns
+# Example: Interaction feature between Age and Experience
+df_engineering['Age_Experience_Ratio'] = df_engineering['Experience'] / (df_engineering['Age'] + 1)
+
+# 31. Extract year, month, and day from a date column
+df_engineering['Join_Year'] = df_engineering['Join_Date'].dt.year
+df_engineering['Join_Month'] = df_engineering['Join_Date'].dt.month
+df_engineering['Join_Day'] = df_engineering['Join_Date'].dt.day
+
+# 32. Create a new feature using mathematical transformations
+# Example: Squaring experience to model non-linear career progression rewards
+df_engineering['Experience_Squared'] = np.square(df_engineering['Experience'])
+
+# 33. Apply Log Transformation to skewed data (Experience is exponentially distributed)
+df_engineering['Log_Experience'] = np.log1p(df_engineering['Experience'])
+
+print("30-33. Engineered features generated:")
+print(df_engineering[['Age_Experience_Ratio', 'Join_Year', 'Experience_Squared', 'Log_Experience']].head(), "\n")
+
+
+# ==========================================
+# PART 5: FEATURE SELECTION & FINAL DATASET (34 - 35)
+# ==========================================
+
+# Select only numerical features to run valid mathematical correlation
+numeric_features_only = df_engineering.select_dtypes(include=[np.number])
+
+# 34. Perform Feature Selection using correlation analysis
+plt.figure(figsize=(10, 8))
+correlation_matrix = numeric_features_only.corr()
+sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', fmt=".2f")
+plt.title("34. Correlation Matrix Heatmap")
+plt.show()
+
+# Drop features that are highly collinear or structurally redundant
+# For example, we keep 'Log_Experience' over raw 'Experience' due to its fixed skew
+features_to_drop = ['Experience', 'Education_LabelEncoded', 'Join_Date', 'Education', 'City']
+df_final = df_engineering.drop(columns=features_to_drop, errors='ignore')
+
+# 35. Create a final preprocessed dataset ready for Machine Learning
+print("35. --- Final Preprocessed Dataset Summary for ML ---")
+print(f"Final Shape: {df_final.shape}")
+print(df_final.info())
+print("\nFirst row preview of the clean modeling matrix:")
+print(df_final.iloc[0])
+# Ml-labsheet2
